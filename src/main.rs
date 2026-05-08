@@ -154,6 +154,22 @@ enum ForkMode {
     Only,
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+enum PatternMode {
+    Literal,
+    Regex,
+}
+
+impl PatternMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Literal => "literal",
+            Self::Regex => "regex",
+        }
+    }
+}
+
 impl ForkMode {
     fn as_str(self) -> &'static str {
         match self {
@@ -286,6 +302,56 @@ struct InspectArgs {
     /// Include the repository README in the output.
     #[serde(default)]
     readme: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema, PartialEq, Eq)]
+struct TreeArgs {
+    /// Optional GitHub host override. Accepts github.com, a full URL, or an API base.
+    #[serde(default)]
+    host: Option<String>,
+    /// Explicit repository identifier in owner/repo form.
+    repository: String,
+    /// Git ref to inspect. Defaults to the repository default branch.
+    #[serde(default)]
+    reference: Option<String>,
+    /// Only show paths matching these glob patterns.
+    #[serde(default)]
+    paths: Vec<String>,
+    /// Only show paths containing this text.
+    #[serde(default)]
+    contains: Option<String>,
+    /// Maximum path depth to return, where root entries are depth 1.
+    #[serde(default)]
+    depth: Option<u32>,
+}
+
+#[derive(Debug, Clone, Deserialize, JsonSchema, PartialEq, Eq)]
+struct CodeArgs {
+    /// Optional GitHub host override. Accepts github.com, a full URL, or an API base.
+    #[serde(default)]
+    host: Option<String>,
+    /// Explicit repository identifier in owner/repo form.
+    repository: String,
+    /// Text or regex pattern to search for.
+    pattern: String,
+    /// Git ref to inspect. Defaults to the repository default branch.
+    #[serde(default)]
+    reference: Option<String>,
+    /// Restrict searched files to these glob patterns.
+    #[serde(default)]
+    paths: Vec<String>,
+    /// Treat the pattern as literal text or a Rust regex.
+    #[serde(default)]
+    mode: Option<PatternMode>,
+    /// Lines of context to include before and after each match.
+    #[serde(default)]
+    context: Option<u32>,
+    /// Maximum number of matches to return.
+    #[serde(default)]
+    limit: Option<u32>,
+    /// Maximum file size to fetch in bytes.
+    #[serde(default)]
+    max_file_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -444,6 +510,26 @@ impl GitquarryServer {
         Ok(self.execute(inspect(args)).await)
     }
 
+    #[tool(
+        description = "Fetch a repository tree through gitquarry without cloning and return structured JSON."
+    )]
+    async fn gitquarry_tree(
+        &self,
+        Parameters(args): Parameters<TreeArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        Ok(self.execute(tree(args)).await)
+    }
+
+    #[tool(
+        description = "Search repository code through gitquarry without cloning and return structured JSON."
+    )]
+    async fn gitquarry_code(
+        &self,
+        Parameters(args): Parameters<CodeArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        Ok(self.execute(code(args)).await)
+    }
+
     #[tool(description = "Show whether gitquarry has a saved token for the effective host.")]
     async fn gitquarry_auth_status(
         &self,
@@ -579,6 +665,53 @@ fn inspect(args: InspectArgs) -> CommandSpec {
     argv.push("inspect".to_string());
     argv.push(args.repository);
     push_flag_if_true(&mut argv, "--readme", args.readme);
+    argv.push("--format".to_string());
+    argv.push("json".to_string());
+    argv.push("--progress".to_string());
+    argv.push("off".to_string());
+
+    CommandSpec {
+        args: argv,
+        output_mode: OutputMode::Json,
+    }
+}
+
+fn tree(args: TreeArgs) -> CommandSpec {
+    let mut argv = Vec::new();
+    push_host(&mut argv, args.host);
+    argv.push("tree".to_string());
+    argv.push(args.repository);
+    push_opt_value(&mut argv, "--reference", args.reference);
+    push_repeat_values(&mut argv, "--path", args.paths);
+    push_opt_value(&mut argv, "--contains", args.contains);
+    push_opt_u32(&mut argv, "--depth", args.depth);
+    argv.push("--format".to_string());
+    argv.push("json".to_string());
+    argv.push("--progress".to_string());
+    argv.push("off".to_string());
+
+    CommandSpec {
+        args: argv,
+        output_mode: OutputMode::Json,
+    }
+}
+
+fn code(args: CodeArgs) -> CommandSpec {
+    let mut argv = Vec::new();
+    push_host(&mut argv, args.host);
+    argv.push("code".to_string());
+    argv.push(args.repository);
+    argv.push(args.pattern);
+    push_opt_value(&mut argv, "--reference", args.reference);
+    push_repeat_values(&mut argv, "--path", args.paths);
+    push_opt_value(
+        &mut argv,
+        "--mode",
+        args.mode.map(|value| value.as_str().to_string()),
+    );
+    push_opt_u32(&mut argv, "--context", args.context);
+    push_opt_u32(&mut argv, "--limit", args.limit);
+    push_opt_u64(&mut argv, "--max-file-bytes", args.max_file_bytes);
     argv.push("--format".to_string());
     argv.push("json".to_string());
     argv.push("--progress".to_string());
@@ -821,6 +954,90 @@ mod tests {
                 "inspect",
                 "rust-lang/rust",
                 "--readme",
+                "--format",
+                "json",
+                "--progress",
+                "off",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn builds_tree_args() {
+        let spec = tree(TreeArgs {
+            host: Some("github.com".to_string()),
+            repository: "microck/gitquarry".to_string(),
+            reference: Some("main".to_string()),
+            paths: vec!["src/*".to_string(), "tests/*".to_string()],
+            contains: Some(".rs".to_string()),
+            depth: Some(2),
+        });
+
+        assert_eq!(
+            spec.args,
+            vec![
+                "--host",
+                "github.com",
+                "tree",
+                "microck/gitquarry",
+                "--reference",
+                "main",
+                "--path",
+                "src/*",
+                "--path",
+                "tests/*",
+                "--contains",
+                ".rs",
+                "--depth",
+                "2",
+                "--format",
+                "json",
+                "--progress",
+                "off",
+            ]
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn builds_code_args() {
+        let spec = code(CodeArgs {
+            host: Some("github.com".to_string()),
+            repository: "microck/gitquarry".to_string(),
+            pattern: "fn main".to_string(),
+            reference: Some("main".to_string()),
+            paths: vec!["src/*.rs".to_string()],
+            mode: Some(PatternMode::Regex),
+            context: Some(2),
+            limit: Some(25),
+            max_file_bytes: Some(500_000),
+        });
+
+        assert_eq!(
+            spec.args,
+            vec![
+                "--host",
+                "github.com",
+                "code",
+                "microck/gitquarry",
+                "fn main",
+                "--reference",
+                "main",
+                "--path",
+                "src/*.rs",
+                "--mode",
+                "regex",
+                "--context",
+                "2",
+                "--limit",
+                "25",
+                "--max-file-bytes",
+                "500000",
                 "--format",
                 "json",
                 "--progress",

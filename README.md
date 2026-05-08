@@ -16,6 +16,8 @@ This server intentionally does not expose `auth login` as an MCP tool. Passing a
 
 - `gitquarry_search` - structured repository search via `gitquarry search --format json --progress off`
 - `gitquarry_inspect` - explicit repository inspection via `gitquarry inspect --format json --progress off`
+- `gitquarry_tree` - repository tree inspection via `gitquarry tree --format json --progress off`
+- `gitquarry_code` - repository code search via `gitquarry code --format json --progress off`
 - `gitquarry_auth_status` - text status for the effective host
 - `gitquarry_auth_logout` - remove the saved token for the effective host
 - `gitquarry_config_path` - print the config path
