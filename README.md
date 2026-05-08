@@ -59,6 +59,35 @@ Explicit repository inspection. Returns structured JSON for a single `owner/repo
 | `readme` | bool? | Include the repository README |
 | `host` | string? | GitHub host override |
 
+### `gitquarry_tree`
+
+Repository tree inspection without cloning. Returns structured JSON from `gitquarry tree --format json --progress off`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `repository` | string | Repository identifier in `owner/repo` form (required) |
+| `reference` | string? | Branch, tag, or commit to inspect |
+| `paths` | string[] | Glob filters using `*` and `?` |
+| `contains` | string? | Keep paths containing this text |
+| `depth` | u32? | Maximum path depth to return |
+| `host` | string? | GitHub host override |
+
+### `gitquarry_code`
+
+Repository code search without cloning. Returns structured JSON from `gitquarry code --format json --progress off`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `repository` | string | Repository identifier in `owner/repo` form (required) |
+| `pattern` | string | Literal text or regex pattern to search for |
+| `reference` | string? | Branch, tag, or commit to inspect |
+| `paths` | string[] | Candidate file glob filters using `*` and `?` |
+| `mode` | enum? | `literal` or `regex` |
+| `context` | u32? | Lines before and after each match |
+| `limit` | u32? | Maximum matches to return |
+| `max_file_bytes` | u64? | Maximum file size to fetch |
+| `host` | string? | GitHub host override |
+
 ### `gitquarry_auth_status`
 
 Show whether gitquarry has a saved token for the effective host.
@@ -81,7 +110,7 @@ Print the wrapped gitquarry CLI version.
 
 ## MCP Resources and Prompts
 
-The server does not expose custom MCP resources or prompts. It is a pure tool server — all interaction happens through the 7 tools listed above.
+The server does not expose custom MCP resources or prompts. It is a pure tool server - all interaction happens through the tools listed above.
 
 ## Environment
 
