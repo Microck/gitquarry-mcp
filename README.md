@@ -18,7 +18,7 @@ This server intentionally does not expose `auth login` as an MCP tool. Passing a
 
 ### `gitquarry_search`
 
-Structured repository search. Maps all search parameters to the underlying `gitquarry search` command with `--format json --progress off`.
+Structured repository search. Maps all search parameters to the underlying `gitquarry search` command with `--format toon --progress off`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -51,7 +51,7 @@ Structured repository search. Maps all search parameters to the underlying `gitq
 
 ### `gitquarry_inspect`
 
-Explicit repository inspection. Returns structured JSON for a single `owner/repo`.
+Explicit repository inspection. Returns TOON text for a single `owner/repo`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -61,7 +61,7 @@ Explicit repository inspection. Returns structured JSON for a single `owner/repo
 
 ### `gitquarry_tree`
 
-Repository tree inspection without cloning. Returns structured JSON from `gitquarry tree --format json --progress off`.
+Repository tree inspection without cloning. Returns TOON text from `gitquarry tree --format toon --progress off`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -74,7 +74,7 @@ Repository tree inspection without cloning. Returns structured JSON from `gitqua
 
 ### `gitquarry_code`
 
-Repository code search without cloning. Returns structured JSON from `gitquarry code --format json --progress off`.
+Repository code search without cloning. Returns TOON text from `gitquarry code --format toon --progress off`.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -147,5 +147,5 @@ All tool errors are returned as MCP error results with a descriptive message. Co
 
 - **Spawn failed:** `gitquarry` not found on `$PATH` — set `GITQUARRY_CLI_PATH` or install the CLI
 - **Timeout:** command exceeded `GITQUARRY_MCP_TIMEOUT_MS` — increase the value for large discover-mode searches
-- **Parse failed:** CLI returned non-JSON output — check that gitquarry is up to date
+- **Parse failed:** CLI returned non-JSON output for a JSON-parsed helper — check that gitquarry is up to date
 - **Command failed:** CLI exited non-zero — the error message includes stderr output from the underlying command
