@@ -490,9 +490,7 @@ impl GitquarryServer {
 
 #[tool_router]
 impl GitquarryServer {
-    #[tool(
-        description = "Search GitHub repositories through gitquarry and return structured JSON."
-    )]
+    #[tool(description = "Search GitHub repositories through gitquarry and return TOON text.")]
     async fn gitquarry_search(
         &self,
         Parameters(args): Parameters<SearchArgs>,
@@ -500,9 +498,7 @@ impl GitquarryServer {
         Ok(self.execute(search(args)).await)
     }
 
-    #[tool(
-        description = "Inspect one explicit owner/repo through gitquarry and return structured JSON."
-    )]
+    #[tool(description = "Inspect one explicit owner/repo through gitquarry and return TOON text.")]
     async fn gitquarry_inspect(
         &self,
         Parameters(args): Parameters<InspectArgs>,
@@ -511,7 +507,7 @@ impl GitquarryServer {
     }
 
     #[tool(
-        description = "Fetch a repository tree through gitquarry without cloning and return structured JSON."
+        description = "Fetch a repository tree through gitquarry without cloning and return TOON text."
     )]
     async fn gitquarry_tree(
         &self,
@@ -521,7 +517,7 @@ impl GitquarryServer {
     }
 
     #[tool(
-        description = "Search repository code through gitquarry without cloning and return structured JSON."
+        description = "Search repository code through gitquarry without cloning and return TOON text."
     )]
     async fn gitquarry_code(
         &self,
@@ -569,9 +565,9 @@ impl ServerHandler for GitquarryServer {
             .with_server_info(Implementation::from_build_env())
             .with_protocol_version(ProtocolVersion::LATEST)
             .with_instructions(
-                "This server wraps the external `gitquarry` CLI. Search and inspect tools force \
-                 JSON output and disable progress noise so MCP clients receive clean structured \
-                 results. Configure GitHub credentials outside MCP via gitquarry env vars or by \
+                "This server wraps the external `gitquarry` CLI. Search, inspect, tree, and code \
+                 tools force TOON output and disable progress noise so MCP clients receive \
+                 token-efficient text results. Configure GitHub credentials outside MCP via gitquarry env vars or by \
                  running `gitquarry auth login` manually in a terminal."
                     .to_string(),
             )
@@ -647,15 +643,15 @@ fn search(args: SearchArgs) -> CommandSpec {
     push_opt_f64(&mut argv, "--weight-activity", args.weight_activity);
     push_opt_f64(&mut argv, "--weight-quality", args.weight_quality);
     push_opt_u32(&mut argv, "--concurrency", args.concurrency);
-    // MCP needs machine-readable stdout and no progress chatter on stderr.
+    // MCP defaults to TOON for token-efficient model context and no progress chatter on stderr.
     argv.push("--format".to_string());
-    argv.push("json".to_string());
+    argv.push("toon".to_string());
     argv.push("--progress".to_string());
     argv.push("off".to_string());
 
     CommandSpec {
         args: argv,
-        output_mode: OutputMode::Json,
+        output_mode: OutputMode::Text,
     }
 }
 
@@ -666,13 +662,13 @@ fn inspect(args: InspectArgs) -> CommandSpec {
     argv.push(args.repository);
     push_flag_if_true(&mut argv, "--readme", args.readme);
     argv.push("--format".to_string());
-    argv.push("json".to_string());
+    argv.push("toon".to_string());
     argv.push("--progress".to_string());
     argv.push("off".to_string());
 
     CommandSpec {
         args: argv,
-        output_mode: OutputMode::Json,
+        output_mode: OutputMode::Text,
     }
 }
 
@@ -686,13 +682,13 @@ fn tree(args: TreeArgs) -> CommandSpec {
     push_opt_value(&mut argv, "--contains", args.contains);
     push_opt_u32(&mut argv, "--depth", args.depth);
     argv.push("--format".to_string());
-    argv.push("json".to_string());
+    argv.push("toon".to_string());
     argv.push("--progress".to_string());
     argv.push("off".to_string());
 
     CommandSpec {
         args: argv,
-        output_mode: OutputMode::Json,
+        output_mode: OutputMode::Text,
     }
 }
 
@@ -713,13 +709,13 @@ fn code(args: CodeArgs) -> CommandSpec {
     push_opt_u32(&mut argv, "--limit", args.limit);
     push_opt_u64(&mut argv, "--max-file-bytes", args.max_file_bytes);
     argv.push("--format".to_string());
-    argv.push("json".to_string());
+    argv.push("toon".to_string());
     argv.push("--progress".to_string());
     argv.push("off".to_string());
 
     CommandSpec {
         args: argv,
-        output_mode: OutputMode::Json,
+        output_mode: OutputMode::Text,
     }
 }
 
@@ -928,7 +924,7 @@ mod tests {
                 "--concurrency",
                 "4",
                 "--format",
-                "json",
+                "toon",
                 "--progress",
                 "off",
             ]
@@ -955,7 +951,7 @@ mod tests {
                 "rust-lang/rust",
                 "--readme",
                 "--format",
-                "json",
+                "toon",
                 "--progress",
                 "off",
             ]
@@ -994,7 +990,7 @@ mod tests {
                 "--depth",
                 "2",
                 "--format",
-                "json",
+                "toon",
                 "--progress",
                 "off",
             ]
@@ -1039,7 +1035,7 @@ mod tests {
                 "--max-file-bytes",
                 "500000",
                 "--format",
-                "json",
+                "toon",
                 "--progress",
                 "off",
             ]
@@ -1089,7 +1085,7 @@ mod tests {
         let error = runner
             .run(CommandSpec {
                 args: vec!["search".to_string(), "rust".to_string()],
-                output_mode: OutputMode::Json,
+                output_mode: OutputMode::Text,
             })
             .await
             .expect_err("runner should return CLI failure");
